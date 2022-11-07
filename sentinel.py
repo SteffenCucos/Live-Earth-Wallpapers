@@ -52,7 +52,9 @@ def combineURL(args,satellite,time):
     if args.latitude == None or args.longitude == None:
         raise ValueError("No coordinates specified! You need to specifiy coordinates by passing the parametera -a and -b.")
     bbox = boundingBox(args.latitude, args.longitude, widthInKm, heightInKm)
+    
     url = f"https://view.eumetsat.int/geoserver/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=true&LAYERS={satellite}&STYLES=&tiled=true&TIME={time}&WIDTH={widthInPx}&HEIGHT={heightInPx}&CRS=EPSG:4326&BBOX={bbox}"
+
     return url
 
 def white_balance(pilImg):
