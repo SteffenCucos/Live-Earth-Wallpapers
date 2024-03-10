@@ -44,7 +44,7 @@ def calcImageDimensions(args):
     else:
         pixelHeight = pixelWidth / (16/9)
 
-    return int(pixelWidth), int(pixelHeight)
+    return int(3840), int(2160)
 
 def combineURL(args,satellite,time):
     widthInKm,heightInKm = calcCoordinateDimensions(args)
@@ -52,7 +52,7 @@ def combineURL(args,satellite,time):
     if args.latitude == None or args.longitude == None:
         raise ValueError("No coordinates specified! You need to specifiy coordinates by passing the parametera -a and -b.")
     bbox = boundingBox(args.latitude, args.longitude, widthInKm, heightInKm)
-    url = f"https://view.eumetsat.int/geoserver/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=true&LAYERS={satellite}&STYLES=&tiled=true&TIME={time}&WIDTH={widthInPx}&HEIGHT={heightInPx}&CRS=EPSG:4326&BBOX={bbox}"
+    url = f"https://view.eumetsat.int/geoserver/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image/png&TRANSPARENT=true&LAYERS={satellite}&STYLES=&tiled=true&TIME={time}&WIDTH={args.width}&HEIGHT={args.height}&CRS=EPSG:4326&BBOX={bbox}"
     return url
 
 def white_balance(pilImg):
@@ -90,25 +90,59 @@ def fetchImage(args):
     def download_func(day):
         time = dateWithDelay.strftime("%Y-%m-")+str(dateWithDelay.day-day).zfill(2)+"T00:00:00Z"
         url = combineURL(args,"copernicus:daily_sentinel3ab_olci_l1_rgb_fulres",time)
-        print(f"Downloading Image from {time}...\nwith URl:   {url}")
+        print(f"Downloading Image from {time}...\nwith URl:   {url}\n")
         img =  download(url)
         return img
 
+    num_days = 7
+    with Pool(num_days) as pool:
+        imgs = pool.map(download_func, [i for i in range(1,num_days + 1)])
 
-    with Pool(4) as pool:
-        imgs = pool.map(download_func, [i for i in range(1,5)])
+    bg = Image.new('RGB', (args.width, args.height))
 
-    # Use the first image as the base
-    bg = imgs[0] 
+    real_images = list(filter(lambda x : x != None, imgs))
+    print("real: ", len(real_images))
 
-    # Overlay the next 3 days worth of images overtop
-    for day in reversed(range(1,4)):
-        img = imgs[day]
-        if img.mode == "RGB":
-            a_channel = Image.new('L', img.size, 255)   # 'L' 8-bit pixels, black and white
-            img.putalpha(a_channel)
+    cloud_remove = False
+    if cloud_remove:
+        def dev(pixel):
+            cols = pixel[:4]
+            dev = max(cols) - min(cols)
+            return dev
 
-        bg.paste(img, (0, 0),img)
+        def sm(pixel):
+            cols = pixel[:3]
+            #dev = max(cols) - min(cols)
+            sm = sum(cols)
+            if sm == 0:
+                return 255*3
+            return sm
+
+        for x in range(args.width):
+            for y in range(args.height):
+                pixels = [img.getpixel((x,y)) for img in real_images]
+
+                pixels.sort(key=sm)
+                sum_pixel = pixels[0] # get the lowest sum (least bright)
+
+                pixels.sort(key=dev)
+                dev_pixel = pixels[-1] # get the largest dev (darkest single chanel)
+
+                avg_pixel = (
+                    int((sum_pixel[0] + dev_pixel[0])/2),
+                    int((sum_pixel[1] + dev_pixel[1])/2),
+                    int((sum_pixel[2] + dev_pixel[2])/2),
+                    255
+                )
+
+                bg.putpixel((x,y), avg_pixel)
+    else:
+        for img in real_images:
+            if img.mode == "RGB":
+                a_channel = Image.new('L', img.size, 255)   # 'L' 8-bit pixels, black and white
+                img.putalpha(a_channel)
+
+            bg.paste(img, (0, 0),img)
 
     colorGraded = white_balance(bg)
     return colorGraded

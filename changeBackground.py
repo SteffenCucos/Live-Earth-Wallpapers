@@ -11,7 +11,7 @@ from utils import setBG, make_border
 from nasa_sdo import getSDOImage
 
 
-sources = ["goes-16", "goes-17", "goes-18", "himawari", "meteosat-9", "meteosat-11", "sentinel", "sdo"]
+sources = ["goes-14", "goes-16", "goes-17", "goes-18", "himawari", "meteosat-9", "meteosat-11", "sentinel", "sdo"]
 random_sources = ["goes-16", "goes-17", "goes-18", "himawari", "meteosat-9", "meteosat-11", "sdo"]
 
 def parseArgs():

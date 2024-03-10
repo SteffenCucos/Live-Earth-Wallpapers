@@ -16,6 +16,7 @@ satelliteData = {
 
 def getTimeCode(sat):
     url = f"https://rammb-slider.cira.colostate.edu/data/json/{sat}/full_disk/natural_color/latest_times.json"
+    print(url)
     f = urllib.request.urlopen(url)
     data = json.load(f)
     latest = data["timestamps_int"][0]
@@ -86,7 +87,7 @@ def getImage(args,base_url):
     end = time.time()
     print("Downloads took: ", end - start)
     #zoom out a bit
-    wallpaper = Image.new('RGB', (int(bg.width*1.2),int(bg.height*1.2)))
-    wallpaper.paste(bg, (int(0+(bg.width*0.1)), int(0+(bg.height*0.1))))
+    wallpaper = Image.new('RGB', (int(bg.width*2.133),int(bg.height*1.2)))
+    wallpaper.paste(bg, (int(0+(bg.width*2.133/2 - bg.width/2)), int(0+(bg.height*0.1))))
 
     return wallpaper
